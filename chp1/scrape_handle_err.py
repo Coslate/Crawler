@@ -22,7 +22,7 @@ def main():
     if(title is None):
         print("Title is not found.")
     else:
-        print("Title = {}".format(title))
+        print("Title = {}".format(title.get_text()))
 
 #---------------Execution---------------#
 if __name__ == '__main__':
