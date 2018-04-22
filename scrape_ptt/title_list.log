@@ -1,0 +1,73 @@
+type(response) = <class 'requests.models.Response'>
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [情報] 明日裁判情報
+push_num = 34
+date     = 4/22
+author   = aaagun
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [討論] 在Rubio身上，我看見了傳奇！
+push_num = 0
+date     = 4/22
+author   = chinting
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [情報] Andrew Bogut 加盟澳洲職籃(NBL)
+push_num = 17
+date     = 4/22
+author   = thnlkj0665
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [外絮] Wade：一次次的失敗造就了我的成功
+push_num = 31
+date     = 4/22
+author   = fukawa947
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [新聞] 溜馬亟欲復仇 Stephenson要讓騎士恐慌
+push_num = 26
+date     = 4/22
+author   = iam168888888
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [情報] 鵜鶘的記者會上刻意給Rondo留了位...
+push_num = 94
+date     = 4/22
+author   = MidoriG
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = Re: [情報] 鵜鶘的記者會上刻意給Rondo留了位...
+push_num = 45
+date     = 4/23
+author   = love1500274
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [Live] 超賽 @ 公鹿
+push_num = 63
+date     = 4/23
+author   = Rambo
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [公告] 板規v6.2
+push_num = 0
+date     = 9/04
+author   = abc7360393
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [公告] 季後賽期間條款
+push_num = 52
+date     = 4/09
+author   = namie810303
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [情報] 2017-18 NBA Playoffs 圖表、賽程、轉播
+push_num = 85
+date     = 4/12
+author   = matthew0123
+=========
+type(article) = <class 'bs4.element.Tag'>
+title    = [公告] NBA 板 開始舉辦樂透!
+push_num = 27
+date     = 4/22
+author   = ericf129
