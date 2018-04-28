@@ -115,11 +115,17 @@ def GetStrValue(tag, numeric_if_none):
         return tag.get_text().strip()
 
 def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug):
+    #--------------------------------------------------------------
+    #Step1. Issue Request.
+    #--------------------------------------------------------------
     try:
         response = requests.get(url)
     except HTTPError as e:
         print(e)
 
+    #--------------------------------------------------------------
+    #Step2. Interpret Response with Beautifulsoup.
+    #--------------------------------------------------------------
     soup         = BeautifulSoup(response.text, 'lxml')
     articles     = soup.find_all('div', {"class":"r-ent"})
     earlest_time = 99999999
