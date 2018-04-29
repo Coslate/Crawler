@@ -9,6 +9,7 @@
         One can input the parameter -st {date} to get all the articles before {date}
         One can input the parameter -key {word} to get all the articles that include the keyword : {word}
         One can input the parameter -out {output_directory} to write out the articles to {output_directory}
+        One can input the parameter -url {url} to scrape the information from {url}
         One can input the parameter -isd {1/0} to get print out the debug messages
 '''
 
@@ -26,8 +27,7 @@ import sys
 #     Main-Routine      #
 #########################
 def main():
-    #Initial URL
-    url = "https://www.ptt.cc/bbs/nba/index.html"
+    #Initial the month dictionary
     month_dic = {"Jan":"01",
                  "Feb":"02",
                  "Mar":"03",
@@ -46,7 +46,7 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, out_dir, is_debug) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, url, is_debug) = ArgumentParser(start_time)
 
     #Scraping all the related articles
     articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug);
@@ -86,12 +86,14 @@ def ArgumentParser(start_time):
     end_time        = None
     keyword         = None
     is_debug        = 0
+    url             = "https://www.ptt.cc/bbs/nba/index.html"
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_time", "-st", help="set the start time of searching articles")
     parser.add_argument("--end_time", "-et", help="set the end time of searching articles")
     parser.add_argument("--keyword", "-key", help="set the keyword that the content of an article will include and be searched")
     parser.add_argument("--out_dir", "-out", help="set the output directory to write out the articles")
+    parser.add_argument("--url", "-url", help="set the url which will be scraped from")
     parser.add_argument("--is_debug", "-isd", help="set 1 to check the debug messages")
 
     args = parser.parse_args()
@@ -104,10 +106,17 @@ def ArgumentParser(start_time):
         keyword = args.keyword
     if args.out_dir:
         out_dir = args.out_dir
+    if args.url:
+        url = args.url
     if args.is_debug:
-        is_debug = bool(args.is_debug)
+        is_debug = int(args.is_debug)
 
-    return (start_time, end_time, keyword, out_dir, is_debug)
+    if(is_debug > 0):
+        is_debug = True
+    else:
+        is_debug = False
+
+    return (start_time, end_time, keyword, out_dir, url, is_debug)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -123,13 +132,15 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
     #Step1. Issue Request.
     #--------------------------------------------------------------
     try:
-        response = requests.get(url)
+        response = requests.get(url, cookies = {'over18':"1"})
     except HTTPError as e:
         print(e)
+        sys.exit()
 
     #--------------------------------------------------------------
     #Step2. Interpret Response with Beautifulsoup.
     #--------------------------------------------------------------
+
     soup         = BeautifulSoup(response.text, 'lxml')
     articles     = soup.find_all('div', {"class":"r-ent"})
     earlest_time = 99999999
@@ -161,16 +172,19 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
             if(content_info == None):
                 continue
 
-            str_line_arr   = content_info.split('\n')
-            title_line_arr = title.split('\n')
-            l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
-            l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
-
-            if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
-                #Store all the information
+            if(keyword == None):
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
-            if(is_debug):
-                print(f"l_cnt = {l_cnt}")
+            else:
+                str_line_arr   = content_info.split('\n')
+                title_line_arr = title.split('\n')
+                l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
+                l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
+
+                if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
+                    #Store all the information
+                    articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
+                if(is_debug):
+                    print(f"l_cnt = {l_cnt}")
 
     #--------------------------------------------------------------
     #Step3. Find the URL of Previous Pages.
