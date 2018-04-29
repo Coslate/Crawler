@@ -8,6 +8,7 @@
         One can input the parameter -et {date} to get all the articles after {date}
         One can input the parameter -st {date} to get all the articles before {date}
         One can input the parameter -key {word} to get all the articles that include the keyword : {word}
+        One can input the parameter -out {output_directory} to write out the articles to {output_directory}
         One can input the parameter -isd {1/0} to get print out the debug messages
 '''
 
@@ -45,7 +46,7 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, is_debug) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, is_debug) = ArgumentParser(start_time)
 
     #Scraping all the related articles
     articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug);
@@ -57,7 +58,7 @@ def main():
         title = title.replace('[', '_')
         title = title.replace(']', '_')
         file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+articles_dic['push_num']+".txt"
-        with open('{}'.format(file_name), 'w') as out_file:
+        with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
             out_file.write(articles_dic['content_info'])
         out_file.closed
 
@@ -90,6 +91,7 @@ def ArgumentParser(start_time):
     parser.add_argument("--start_time", "-st", help="set the start time of searching articles")
     parser.add_argument("--end_time", "-et", help="set the end time of searching articles")
     parser.add_argument("--keyword", "-key", help="set the keyword that the content of an article will include and be searched")
+    parser.add_argument("--out_dir", "-out", help="set the output directory to write out the articles")
     parser.add_argument("--is_debug", "-isd", help="set 1 to check the debug messages")
 
     args = parser.parse_args()
@@ -100,10 +102,12 @@ def ArgumentParser(start_time):
         end_time = int(args.end_time)
     if args.keyword:
         keyword = args.keyword
+    if args.out_dir:
+        out_dir = args.out_dir
     if args.is_debug:
         is_debug = bool(args.is_debug)
 
-    return (start_time, end_time, keyword, is_debug)
+    return (start_time, end_time, keyword, out_dir, is_debug)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -145,7 +149,7 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
         link_url    = urlparse.urljoin(url, link)
 
         #Get the detailed timing info of the content
-        date_reform = GetTimeInfo(link_url, month_dic)
+        date_reform = GetTimeInfo(link_url, month_dic, start_time)
         if(date_reform == None):
             continue
         if(int(date_reform) < earlest_time):
@@ -153,11 +157,16 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
 
         if((int(date_reform) <= int(start_time)) and (int(date_reform) >= int(end_time))):
             #Get the content
-            content_info = GetContentInfo(link_url)
-            str_line_arr = content_info.split('\n')
-            l_cnt = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
+            content_info   = GetContentInfo(link_url)
+            if(content_info == None):
+                continue
 
-            if(sum(l_cnt) > 0):
+            str_line_arr   = content_info.split('\n')
+            title_line_arr = title.split('\n')
+            l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
+            l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
+
+            if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
                 #Store all the information
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
             if(is_debug):
@@ -186,7 +195,7 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug):
 
     return (articles_dic_arr)
 
-def GetTimeInfo(link_url, month_dic):
+def GetTimeInfo(link_url, month_dic, start_time):
     try:
         response = requests.get(link_url)
     except HTTPError as e:
@@ -199,7 +208,7 @@ def GetTimeInfo(link_url, month_dic):
         time_blk = soup.find('span', 'article-meta-value', text=re.compile("^\S+\s*(\S+)\s*(\S+)\s*\S+\:\S+\:\S+\s*(\S+)\s*")).get_text()
     except AttributeError as e:
         print(e)
-        return None
+        return str(start_time)
 
     time_match = re.match(r"^\S+\s*(\S+)\s*(\S+)\s*\S+\:\S+\:\S+\s*(\S+)\s*", time_blk)
     month = month_dic[time_match.group(1)]
@@ -213,6 +222,7 @@ def GetContentInfo(link_url):
         response = requests.get(link_url)
     except HTTPError as e:
         print(e)
+        print('Respones None')
         sys.exit()
 
     soup = BeautifulSoup(response.text, 'lxml')
@@ -222,6 +232,7 @@ def GetContentInfo(link_url):
         content = content_blk.get_text()
     except AttributeError as e:
         print(e)
+        print('Content None')
         return None
 
     return content

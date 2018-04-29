@@ -1,3 +1,14 @@
-#! /usr/bin -f
+#! /bin/csh -f
 
-./scrape_ptt.py -et 20180429 -key 爆雷魔 -isd 1 > title_list.log
+set out_dir = "./output"
+
+if ( -d $out_dir ) then
+    rm -rf $out_dir
+    mkdir $out_dir
+else 
+    mkdir $out_dir
+endif
+
+
+#./scrape_ptt.py -et 20180429 -key BOX -out $out_dir -isd 1 > title_list.log
+./scrape_ptt.py -et 20180429 -key 爆雷魔 -out $out_dir -isd 1 > title_list.log
