@@ -57,7 +57,7 @@ def main():
         title = re.sub(pattern, '', title)
         title = title.replace('[', '_')
         title = title.replace(']', '_')
-        file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+articles_dic['push_num']+".txt"
+        file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+str(articles_dic['push_num'])+".txt"
         with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
             out_file.write(articles_dic['content_info'])
         out_file.closed
