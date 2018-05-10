@@ -11,6 +11,7 @@
         One can input the parameter -out {output_directory} to write out the articles to {output_directory}
         One can input the parameter -url {url} to scrape the information from {url}
         One can input the parameter -isd {1/0} to get print out the debug messages
+        One can input the parameter -cse {1/0} to consider keyword case sensitive
 '''
 
 import urllib.parse as urlparse
@@ -49,10 +50,10 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, out_dir, url, is_debug) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive) = ArgumentParser(start_time)
 
     #Scraping all the related articles
-    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir)
+    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive)
 
 #    for articles_dic in articles_dic_arr:
 #        title = articles_dic['title']
@@ -92,6 +93,7 @@ def ArgumentParser(start_time):
     keyword         = None
     is_debug        = 0
     url             = "https://www.ptt.cc/bbs/nba/index.html"
+    case_sensitive  = 0
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_time", "-st", help="set the start time of searching articles")
@@ -100,6 +102,7 @@ def ArgumentParser(start_time):
     parser.add_argument("--out_dir", "-out", help="set the output directory to write out the articles")
     parser.add_argument("--url", "-url", help="set the url which will be scraped from")
     parser.add_argument("--is_debug", "-isd", help="set 1 to check the debug messages")
+    parser.add_argument("--case_sensitive", "-cse", help="set 1 to use case sensitive when check the keyword")
 
     args = parser.parse_args()
 
@@ -115,13 +118,15 @@ def ArgumentParser(start_time):
         url = args.url
     if args.is_debug:
         is_debug = int(args.is_debug)
+    if args.case_sensitive:
+        case_sensitive = int(args.case_sensitive)
 
     if(is_debug > 0):
         is_debug = True
     else:
         is_debug = False
 
-    return (start_time, end_time, keyword, out_dir, url, is_debug)
+    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -132,7 +137,7 @@ def GetStrValue(tag, numeric_if_none):
     else:
         return tag.get_text().strip()
 
-def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir):
+def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive):
     #--------------------------------------------------------------
     #Step1. Issue Request.
     #--------------------------------------------------------------
@@ -184,8 +189,8 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
             else:
                 str_line_arr   = content_info.split('\n')
                 title_line_arr = title.split('\n')
-                l_cnt       = [1 if(CheckLineIncludesKeywords(keyword, line)) else 0 for line in str_line_arr]
-                l_cnt_title = [1 if(CheckLineIncludesKeywords(keyword, line)) else 0 for line in title_line_arr]
+                l_cnt       = [1 if(CheckLineIncludesKeywords(keyword, line, case_sensitive)) else 0 for line in str_line_arr]
+                l_cnt_title = [1 if(CheckLineIncludesKeywords(keyword, line, case_sensitive)) else 0 for line in title_line_arr]
 #                l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
 #                l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
 
@@ -205,12 +210,12 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
 
     return (link_url, earlest_time)
 
-def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir):
+def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive):
     articles_dic_arr = []
     count_once = 0
     while(True):
         this_loop_article = []
-        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir)
+        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive)
         for each_article in this_loop_article:
             articles_dic_arr.append((each_article))
         if(count_once < 2):
@@ -282,14 +287,19 @@ def ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, cont
         out_file.write(content_info)
     out_file.closed
 
-def CheckLineIncludesKeywords(keyword, line):
+def CheckLineIncludesKeywords(keyword, line, case_sensitive):
     is_included = False
     keyword_arr = keyword.split('_')
 
     for keyword_element in keyword_arr:
-        if(len(re.findall(r'{x}'.format(x = keyword_element), line))):
-            is_included = True
-            break
+        if(case_sensitive):
+            if(len(re.findall(r'{x}'.format(x = keyword_element), line))):
+                is_included = True
+                break
+        else:
+            if(len(re.findall(r'{x}'.format(x = keyword_element.lower()), line.lower()))):
+                is_included = True
+                break
 
     return is_included
 
