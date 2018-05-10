@@ -52,20 +52,20 @@ def main():
     (start_time, end_time, keyword, out_dir, url, is_debug) = ArgumentParser(start_time)
 
     #Scraping all the related articles
-    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug);
+    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir)
 
-    for articles_dic in articles_dic_arr:
-        title = articles_dic['title']
-        pattern = re.compile(r'\s*')
-        title = re.sub(pattern, '', title)
-        title = title.replace('[', '_')
-        title = title.replace(']', '_')
-        title = title.replace('/', '_')
-
-        file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+str(articles_dic['push_num'])+".txt"
-        with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
-            out_file.write(articles_dic['content_info'])
-        out_file.closed
+#    for articles_dic in articles_dic_arr:
+#        title = articles_dic['title']
+#        pattern = re.compile(r'\s*')
+#        title = re.sub(pattern, '', title)
+#        title = title.replace('[', '_')
+#        title = title.replace(']', '_')
+#        title = title.replace('/', '_')
+#
+#        file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+str(articles_dic['push_num'])+".txt"
+#        with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
+#            out_file.write(articles_dic['content_info'])
+#        out_file.closed
 
     #Print the debug messages when necessary
     if(is_debug):
@@ -132,7 +132,7 @@ def GetStrValue(tag, numeric_if_none):
     else:
         return tag.get_text().strip()
 
-def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug):
+def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir):
     #--------------------------------------------------------------
     #Step1. Issue Request.
     #--------------------------------------------------------------
@@ -179,6 +179,8 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
 
             if(keyword == None):
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
+                ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
+
             else:
                 str_line_arr   = content_info.split('\n')
                 title_line_arr = title.split('\n')
@@ -188,6 +190,7 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
                 if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
                     #Store all the information
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
+                    ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
                 if(is_debug):
                     print(f"l_cnt = {l_cnt}")
@@ -200,12 +203,12 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
 
     return (link_url, earlest_time)
 
-def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug):
+def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir):
     articles_dic_arr = []
     count_once = 0
     while(True):
         this_loop_article = []
-        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug)
+        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir)
         for each_article in this_loop_article:
             articles_dic_arr.append((each_article))
         if(count_once < 2):
@@ -265,6 +268,17 @@ def GetContentInfo(link_url):
 
     return content
 
+def ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info):
+    pattern = re.compile(r'\s*')
+    title = re.sub(pattern, '', title)
+    title = title.replace('[', '_')
+    title = title.replace(']', '_')
+    title = title.replace('/', '_')
+
+    file_name = title+"_"+date_reform+"_"+author+'_'+str(push_num)+".txt"
+    with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
+        out_file.write(content_info)
+    out_file.closed
 
 
 #---------------Execution---------------#
