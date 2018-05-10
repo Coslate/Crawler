@@ -12,4 +12,6 @@ endif
 
 #./scrape_ptt.py -et 20180429 -key BOX -out $out_dir -isd 1 > title_list.log
 #./scrape_ptt.py -et 20180429 -key 爆雷魔 -out $out_dir -isd 1 > title_list.log
-./scrape_ptt.py -et 20180429 -out $out_dir -isd 0 -url https://www.ptt.cc/bbs/nba/index.html
+#./scrape_ptt.py -et 20180429 -out $out_dir -isd 0 -url https://www.ptt.cc/bbs/nba/index.html
+# -key support multiple keywords : keyword1_keyword2_keyword3_..._keywordn
+./scrape_ptt.py -et 20180510 -out $out_dir -isd 0 -url https://www.ptt.cc/bbs/nba/index.html -key lwei781_msdie911545
