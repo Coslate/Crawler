@@ -27,6 +27,9 @@ import sys
 #     Main-Routine      #
 #########################
 def main():
+    #Disable Warning
+    requests.packages.urllib3.disable_warnings()
+
     #Initial the month dictionary
     month_dic = {"Jan":"01",
                  "Feb":"02",
@@ -57,6 +60,8 @@ def main():
         title = re.sub(pattern, '', title)
         title = title.replace('[', '_')
         title = title.replace(']', '_')
+        title = title.replace('/', '_')
+
         file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+str(articles_dic['push_num'])+".txt"
         with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
             out_file.write(articles_dic['content_info'])
@@ -132,7 +137,7 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
     #Step1. Issue Request.
     #--------------------------------------------------------------
     try:
-        response = requests.get(url, cookies = {'over18':"1"})
+        response = requests.get(url, cookies = {'over18':"1"}, verify = False)
     except HTTPError as e:
         print(e)
         sys.exit()
@@ -183,6 +188,7 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
                 if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
                     #Store all the information
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
+
                 if(is_debug):
                     print(f"l_cnt = {l_cnt}")
 
@@ -211,7 +217,7 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug):
 
 def GetTimeInfo(link_url, month_dic, start_time):
     try:
-        response = requests.get(link_url)
+        response = requests.get(link_url, verify = False)
     except HTTPError as e:
         print(e)
         sys.exit()
@@ -232,8 +238,16 @@ def GetTimeInfo(link_url, month_dic, start_time):
     return(year+month+day)
 
 def GetContentInfo(link_url):
+    payload = {
+        "from" : "/bbs/Gossiping/index.html",
+        "yes"  : "yes"
+    }
+    rs = requests.session()
+    res = rs.post("https://www.ptt.cc/ask/over18", verify = False, data = payload)
+
     try:
-        response = requests.get(link_url)
+#        response = requests.get(link_url)
+        response = rs.get(link_url, verify = False)
     except HTTPError as e:
         print(e)
         print('Respones None')
