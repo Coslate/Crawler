@@ -184,8 +184,10 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
             else:
                 str_line_arr   = content_info.split('\n')
                 title_line_arr = title.split('\n')
-                l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
-                l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
+                l_cnt       = [1 if(CheckLineIncludesKeywords(keyword, line)) else 0 for line in str_line_arr]
+                l_cnt_title = [1 if(CheckLineIncludesKeywords(keyword, line)) else 0 for line in title_line_arr]
+#                l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
+#                l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
 
                 if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
                     #Store all the information
@@ -280,6 +282,16 @@ def ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, cont
         out_file.write(content_info)
     out_file.closed
 
+def CheckLineIncludesKeywords(keyword, line):
+    is_included = False
+    keyword_arr = keyword.split('_')
+
+    for keyword_element in keyword_arr:
+        if(len(re.findall(r'{x}'.format(x = keyword_element), line))):
+            is_included = True
+            break
+
+    return is_included
 
 #---------------Execution---------------#
 if __name__ == '__main__':
