@@ -12,6 +12,7 @@
         One can input the parameter -url {url} to scrape the information from {url}
         One can input the parameter -isd {1/0} to get print out the debug messages
         One can input the parameter -cse {1/0} to consider keyword case sensitive
+        One can input the parameter -thnum {threshold} to print out the article that keyword occurs {threshold} times
 '''
 
 import urllib.parse as urlparse
@@ -50,23 +51,10 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur) = ArgumentParser(start_time)
 
     #Scraping all the related articles
-    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive)
-
-#    for articles_dic in articles_dic_arr:
-#        title = articles_dic['title']
-#        pattern = re.compile(r'\s*')
-#        title = re.sub(pattern, '', title)
-#        title = title.replace('[', '_')
-#        title = title.replace(']', '_')
-#        title = title.replace('/', '_')
-#
-#        file_name = title+"_"+articles_dic['date_reform']+"_"+articles_dic['author']+'_'+str(articles_dic['push_num'])+".txt"
-#        with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
-#            out_file.write(articles_dic['content_info'])
-#        out_file.closed
+    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur)
 
     #Print the debug messages when necessary
     if(is_debug):
@@ -103,6 +91,7 @@ def ArgumentParser(start_time):
     parser.add_argument("--url", "-url", help="set the url which will be scraped from")
     parser.add_argument("--is_debug", "-isd", help="set 1 to check the debug messages")
     parser.add_argument("--case_sensitive", "-cse", help="set 1 to use case sensitive when check the keyword")
+    parser.add_argument("--thresh_occur", "-thnum", help="the threshold of the number that a keyword must occurs in an article for printing.")
 
     args = parser.parse_args()
 
@@ -120,13 +109,15 @@ def ArgumentParser(start_time):
         is_debug = int(args.is_debug)
     if args.case_sensitive:
         case_sensitive = int(args.case_sensitive)
+    if args.thresh_occur:
+        thresh_occur = int(args.thresh_occur)
 
     if(is_debug > 0):
         is_debug = True
     else:
         is_debug = False
 
-    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive)
+    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -137,7 +128,7 @@ def GetStrValue(tag, numeric_if_none):
     else:
         return tag.get_text().strip()
 
-def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive):
+def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur):
     #--------------------------------------------------------------
     #Step1. Issue Request.
     #--------------------------------------------------------------
@@ -170,7 +161,7 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
         link_url    = urlparse.urljoin(url, link)
 
         #Get the detailed timing info of the content
-        date_reform = GetTimeInfo(link_url, month_dic, start_time)
+        date_reform = GetTimeInfo(link_url, month_dic, start_time, is_debug)
         if(date_reform == None):
             continue
         if(int(date_reform) < earlest_time):
@@ -189,18 +180,17 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
             else:
                 str_line_arr   = content_info.split('\n')
                 title_line_arr = title.split('\n')
-                l_cnt       = [1 if(CheckLineIncludesKeywords(keyword, line, case_sensitive)) else 0 for line in str_line_arr]
-                l_cnt_title = [1 if(CheckLineIncludesKeywords(keyword, line, case_sensitive)) else 0 for line in title_line_arr]
-#                l_cnt       = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in str_line_arr]
-#                l_cnt_title = [1 if(len(re.findall(r'{x}'.format(x = keyword), line))) else 0 for line in title_line_arr]
+                l_cnt       = [CheckLineIncludesKeywords(keyword, line, case_sensitive) for line in str_line_arr]
+                l_cnt_title = [CheckLineIncludesKeywords(keyword, line, case_sensitive) for line in title_line_arr]
 
-                if((sum(l_cnt) > 0) or (sum(l_cnt_title) > 0)):
+                if((sum(l_cnt) > thresh_occur) or (sum(l_cnt_title) > thresh_occur)):
                     #Store all the information
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
                     ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
                 if(is_debug):
                     print(f"l_cnt = {l_cnt}")
+                    print(f"l_cnt_title = {l_cnt_title}")
 
     #--------------------------------------------------------------
     #Step3. Find the URL of Previous Pages.
@@ -210,12 +200,12 @@ def GetThePageAndUpdateURL(url, articles_dic_arr, start_time, end_time, month_di
 
     return (link_url, earlest_time)
 
-def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive):
+def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur):
     articles_dic_arr = []
     count_once = 0
     while(True):
         this_loop_article = []
-        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive)
+        (url, earlest_time) = GetThePageAndUpdateURL(url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur)
         for each_article in this_loop_article:
             articles_dic_arr.append((each_article))
         if(count_once < 2):
@@ -225,7 +215,7 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_
 
     return (articles_dic_arr)
 
-def GetTimeInfo(link_url, month_dic, start_time):
+def GetTimeInfo(link_url, month_dic, start_time, is_debug):
     try:
         response = requests.get(link_url, verify = False)
     except HTTPError as e:
@@ -235,10 +225,13 @@ def GetTimeInfo(link_url, month_dic, start_time):
     soup = BeautifulSoup(response.text, 'lxml')
 
     try:
-        time_blk = soup.find('span', 'article-meta-value', text=re.compile("^\S+\s*(\S+)\s*(\S+)\s*\S+\:\S+\:\S+\s*(\S+)\s*")).get_text()
+        time_blk = soup.find('span', 'article-meta-value', text=re.compile("^\S+\s+(\S+)\s+(\S+)\s+\S+\:\S+\:\S+\s+(\S+)\s*")).get_text()
     except AttributeError as e:
         print(e)
         return str(start_time)
+
+    if(is_debug):
+        print(f'time_blk ={time_blk}')
 
     time_match = re.match(r"^\S+\s*(\S+)\s*(\S+)\s*\S+\:\S+\:\S+\s*(\S+)\s*", time_blk)
     month = month_dic[time_match.group(1)]
@@ -288,20 +281,16 @@ def ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, cont
     out_file.closed
 
 def CheckLineIncludesKeywords(keyword, line, case_sensitive):
-    is_included = False
+    included_num = 0
     keyword_arr = keyword.split('_')
 
     for keyword_element in keyword_arr:
         if(case_sensitive):
-            if(len(re.findall(r'{x}'.format(x = keyword_element), line))):
-                is_included = True
-                break
+            included_num += len(re.findall(r'{x}'.format(x = keyword_element), line))
         else:
-            if(len(re.findall(r'{x}'.format(x = keyword_element.lower()), line.lower()))):
-                is_included = True
-                break
+            included_num += len(re.findall(r'{x}'.format(x = keyword_element.lower()), line.lower()))
 
-    return is_included
+    return included_num
 
 #---------------Execution---------------#
 if __name__ == '__main__':
