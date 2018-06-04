@@ -10,7 +10,7 @@ import re
 #     Main-Routine      #
 #########################
 def main():
-    directory = ArgumentParser()
+    (directory, outfile) = ArgumentParser()
     onlyfiles = [join(directory, f) for f in listdir(directory) if isfile(join(directory, f))]
     file_dict = {}
 
@@ -20,7 +20,7 @@ def main():
 
     sorted_file_dict = sorted(file_dict.items(), key=operator.itemgetter(1))
 
-    with open('{x}/{y}'.format(x = ".", y = "sort_out_files_list"), 'w') as out_file:
+    with open('{x}'.format(x = outfile), 'w') as out_file:
         for x in sorted_file_dict:
             out_file.write("{a} , {b}\n".format(a = x[0], b = x[1]))
 
@@ -32,12 +32,16 @@ def ArgumentParser():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", "-dir", help="Sorting and listing all the files under the specified directory")
+    parser.add_argument("--outfile", "-out", help="Specify the output file name.")
 
     args = parser.parse_args()
     if args.directory:
         directory = args.directory
 
-    return directory
+    if args.outfile:
+        outfile = args.outfile
+
+    return (directory, outfile)
 
 #---------------Execution---------------#
 if __name__ == '__main__':
