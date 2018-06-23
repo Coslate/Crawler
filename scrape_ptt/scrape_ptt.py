@@ -216,7 +216,19 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
 
         date_reform_prev = date_reform
         if(int(date_reform) < earlest_time):
-            earlest_time = int(date_reform)
+            title_match1 = re.match(r'.*NBA\s*Playoffs\s*圖表.*賽程.*轉播\s*', title)
+            title_match2 = re.match(r'\s*\[\s*活動\s*\]\s*ＮＢＡ之年度徵文大賞\s*', title)
+            if((title_match1 is None) and (title_match2 is None)):
+                earlest_time = int(date_reform)
+
+                if(is_debug):
+                    print(f"<====================================>")
+                    print(f"earlest_time update...{earlest_time}")
+                    print(f"title = {title}")
+                    print(f"link_url = {link_url}")
+                    print(f"author = {author}")
+                    print(f"date = {date}")
+                    print(f"push_num = {push_num}")
 
         if((int(date_reform) <= int(start_time)) and (int(date_reform) >= int(end_time))):
             #Get the content
@@ -229,6 +241,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                 ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
                 if(is_debug):
                     print(f"============================")
+                    print(f"Get article without keyword!")
                     print(f"title = {title}")
                     print(f"push_num = {push_num}")
                     print(f"author = {author}")
@@ -249,6 +262,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
 
                 if(is_debug):
                     print(f"============================")
+                    print(f"Get article with keyword!")
                     print(f"l_cnt = {l_cnt}")
                     print(f"l_cnt_title = {l_cnt_title}")
                     print(f"title = {title}")
@@ -279,6 +293,8 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_
     while(True):
         this_loop_article = []
         (url, earlest_time, date_reform_prev) = GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur)
+        if(is_debug):
+            print(f'earlest_time of this link_url page= {earlest_time}')
         for each_article in this_loop_article:
             articles_dic_arr.append((each_article))
         if(count_once < 2):
