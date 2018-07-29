@@ -25,11 +25,16 @@ import argparse
 import datetime
 import sys
 import time
+import package_beauty.beauty as beauty
 
 #########################
 #     Main-Routine      #
 #########################
 def main():
+    #test
+    beauty.TestHello()
+
+
     #Disable Warning
     requests.packages.urllib3.disable_warnings()
 
