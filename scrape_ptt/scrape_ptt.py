@@ -31,10 +31,6 @@ import package_beauty.beauty as beauty
 #     Main-Routine      #
 #########################
 def main():
-    #test
-    beauty.TestHello()
-
-
     #Disable Warning
     requests.packages.urllib3.disable_warnings()
 
@@ -244,6 +240,9 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
             if(keyword == None):
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
                 ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
+
+                img_url_list = beauty.GetAllImgURL(content_info)
+
                 if(is_debug):
                     print(f"============================")
                     print(f"Get article without keyword!")
@@ -253,6 +252,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                     print(f"date = {date}")
                     print(f"date_reform = {date_reform}")
                     print(f"link_url = {link_url}")
+                    print(f"img_url_list = {img_url_list}")
 
             else:
                 str_line_arr   = content_info.split('\n')
@@ -265,6 +265,8 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
                     ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
+                    img_url_list = beauty.GetAllImgURL(content_info)
+
                 if(is_debug):
                     print(f"============================")
                     print(f"Get article with keyword!")
@@ -275,6 +277,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                     print(f"author = {author}")
                     print(f"date = {date}")
                     print(f"date_reform = {date_reform}")
+                    print(f"img_url_list = {img_url_list}")
 
     #--------------------------------------------------------------
     #Step3. Find the URL of Previous Pages.
