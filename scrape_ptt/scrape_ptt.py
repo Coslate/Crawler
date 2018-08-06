@@ -13,6 +13,8 @@
         One can input the parameter -isd {1/0} to get print out the debug messages
         One can input the parameter -cse {1/0} to consider keyword case sensitive
         One can input the parameter -thnum {threshold} to print out the article that keyword occurs {threshold} times
+        One can input the parameter -thnum_push {threshold} to get all the image under an article that has push number occurs {threshold} times
+        One can input the parameter -out_img_folder {folder_name} to output all the image folders.
 '''
 
 import urllib.parse as urlparse
@@ -53,10 +55,10 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder) = ArgumentParser(start_time)
 
     #Scraping all the related articles
-    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur)
+    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder)
 
     #Print the debug messages when necessary
     if(is_debug):
@@ -85,6 +87,8 @@ def ArgumentParser(start_time):
     url             = "https://www.ptt.cc/bbs/nba/index.html"
     case_sensitive  = 0
     thresh_occur    = 0
+    thresh_push     = 0
+    out_img_folder  = None
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_time", "-st", help="set the start time of searching articles")
@@ -95,6 +99,8 @@ def ArgumentParser(start_time):
     parser.add_argument("--is_debug", "-isd", help="set 1 to check the debug messages")
     parser.add_argument("--case_sensitive", "-cse", help="set 1 to use case sensitive when check the keyword")
     parser.add_argument("--thresh_occur", "-thnum", help="the threshold of the number that a keyword must occurs in an article for printing.")
+    parser.add_argument("--thresh_push", "-thnum_push", help="the threshold of the number of push.")
+    parser.add_argument("--out_img_folder", "-out_img_folder", help="the folder to output the image files.")
 
     args = parser.parse_args()
 
@@ -114,13 +120,17 @@ def ArgumentParser(start_time):
         case_sensitive = int(args.case_sensitive)
     if args.thresh_occur:
         thresh_occur = int(args.thresh_occur)
+    if args.thresh_push:
+        thresh_push = int(args.thresh_push)
+    if args.out_img_folder:
+        out_img_folder = args.out_img_folder
 
     if(is_debug > 0):
         is_debug = True
     else:
         is_debug = False
 
-    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur)
+    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -131,7 +141,7 @@ def GetStrValue(tag, numeric_if_none):
     else:
         return tag.get_text().strip()
 
-def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur):
+def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder):
     #--------------------------------------------------------------
     #Step1. Issue Request.
     #--------------------------------------------------------------
@@ -158,12 +168,13 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
     articles     = soup.find_all('div', {"class":"r-ent"})
 
     for article in articles:
-        title_class = article.find('div', 'title').find('a') or BeautifulSoup('<a>本文已被刪除</a>', 'lxml').a
-        title    = GetStrValue(title_class, 0)
-        link     = title_class.get('href')
-        push_num = GetStrValue(article.find('div', 'nrec').find('span', {"class":re.compile("^hl\s*.*")}), 1)
-        date     = GetStrValue(article.find('div', 'meta').find('div', {"class":"date"}), 0)
-        author   = GetStrValue(article.find('div', 'meta').find('div', {"class":"author"}), 0)
+        title_class  = article.find('div', 'title').find('a') or BeautifulSoup('<a>本文已被刪除</a>', 'lxml').a
+        title        = GetStrValue(title_class, 0)
+        link         = title_class.get('href')
+        push_num     = GetStrValue(article.find('div', 'nrec').find('span', {"class":re.compile("^hl\s*.*")}), 1)
+        date         = GetStrValue(article.find('div', 'meta').find('div', {"class":"date"}), 0)
+        author       = GetStrValue(article.find('div', 'meta').find('div', {"class":"author"}), 0)
+        img_url_list = None
 
         if((title == "None") or (re.match(r'\s*\[\s*公告\s*\].*', title) is not None)):
             continue
@@ -239,9 +250,12 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
 
             if(keyword == None):
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
-                ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
+                folder_name = ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
-                img_url_list = beauty.GetAllImgURL(content_info)
+                if(push_num == '爆'):
+                    img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                elif(int(push_num) > thresh_push):
+                    img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
 
                 if(is_debug):
                     print(f"============================")
@@ -263,9 +277,12 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                 if((sum(l_cnt) > thresh_occur) or (sum(l_cnt_title) > thresh_occur)):
                     #Store all the information
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
-                    ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
+                    folder_name = ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
-                    img_url_list = beauty.GetAllImgURL(content_info)
+                    if(push_num == '爆'):
+                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                    elif(int(push_num) > thresh_push):
+                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
 
                 if(is_debug):
                     print(f"============================")
@@ -292,7 +309,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
 
     return (link_url, earlest_time, date_reform_prev)
 
-def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur):
+def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder):
     articles_dic_arr = []
     count_once = 0
     earlest_time = 99999999
@@ -300,7 +317,7 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_
 
     while(True):
         this_loop_article = []
-        (url, earlest_time, date_reform_prev) = GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur)
+        (url, earlest_time, date_reform_prev) = GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder)
         if(is_debug):
             print(f'earlest_time of this link_url page= {earlest_time}')
         for each_article in this_loop_article:
@@ -397,10 +414,13 @@ def ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, cont
     title = title.replace(']', '_')
     title = title.replace('/', '_')
 
-    file_name = title+"_"+date_reform+"_"+author+'_'+str(push_num)+".txt"
+    folder_name = title+"_"+date_reform+"_"+author+'_'+str(push_num)
+    file_name   = folder_name+".txt"
     with open('{x}/{y}'.format(x = out_dir, y = file_name), 'w') as out_file:
         out_file.write(content_info)
     out_file.closed
+
+    return folder_name
 
 def CheckLineIncludesKeywords(keyword, line, case_sensitive):
     included_num = 0
@@ -414,6 +434,18 @@ def CheckLineIncludesKeywords(keyword, line, case_sensitive):
 
     return included_num
 
+def ProcessImg(content_info, folder_name):
+    count_i = 0
+    img_url_list = beauty.GetAllImgURL(content_info)
+
+    for img_url in img_url_list:
+        if(count_i == 0):
+            beauty.GetSaveImage(img_url, folder_name, True)
+        else:
+            beauty.GetSaveImage(img_url, folder_name, False)
+        count_i += 1
+
+    return img_url_list
 #---------------Execution---------------#
 if __name__ == '__main__':
     main()
