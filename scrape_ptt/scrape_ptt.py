@@ -15,6 +15,7 @@
         One can input the parameter -thnum {threshold} to print out the article that keyword occurs {threshold} times
         One can input the parameter -thnum_push {threshold} to get all the image under an article that has push number occurs {threshold} times
         One can input the parameter -out_img_folder {folder_name} to output all the image folders.
+        One can input the parameter -extract_img_en {1/0} to turn on the function of image-auto-extraction.
 '''
 
 import urllib.parse as urlparse
@@ -55,10 +56,10 @@ def main():
     start_time      = re.match(r"(\d+)\-(\d+)\-(\d+)\s.*", str(start_time)).groups()
     start_time      = int(start_time[0]+start_time[1]+start_time[2])
     end_time        = None
-    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder) = ArgumentParser(start_time)
+    (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en) = ArgumentParser(start_time)
 
     #Scraping all the related articles
-    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder)
+    articles_dic_arr = GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en)
 
     #Print the debug messages when necessary
     if(is_debug):
@@ -89,6 +90,7 @@ def ArgumentParser(start_time):
     thresh_occur    = 0
     thresh_push     = 0
     out_img_folder  = None
+    extract_img_en  = 0
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--start_time", "-st", help="set the start time of searching articles")
@@ -101,6 +103,7 @@ def ArgumentParser(start_time):
     parser.add_argument("--thresh_occur", "-thnum", help="the threshold of the number that a keyword must occurs in an article for printing.")
     parser.add_argument("--thresh_push", "-thnum_push", help="the threshold of the number of push.")
     parser.add_argument("--out_img_folder", "-out_img_folder", help="the folder to output the image files.")
+    parser.add_argument("--extract_img_en", "-extract_img_en", help="set 1 to turn on the function of image-auto-extraction.")
 
     args = parser.parse_args()
 
@@ -124,13 +127,15 @@ def ArgumentParser(start_time):
         thresh_push = int(args.thresh_push)
     if args.out_img_folder:
         out_img_folder = args.out_img_folder
+    if args.extract_img_en:
+        extract_img_en = int(args.extract_img_en)
 
     if(is_debug > 0):
         is_debug = True
     else:
         is_debug = False
 
-    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder)
+    return (start_time, end_time, keyword, out_dir, url, is_debug, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en)
 
 def GetStrValue(tag, numeric_if_none):
     if(tag == None):
@@ -141,7 +146,7 @@ def GetStrValue(tag, numeric_if_none):
     else:
         return tag.get_text().strip()
 
-def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder):
+def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en):
     #--------------------------------------------------------------
     #Step1. Issue Request.
     #--------------------------------------------------------------
@@ -252,10 +257,13 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                 articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
                 folder_name = ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
-                if(push_num == '爆'):
-                    img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
-                elif(int(push_num) > thresh_push):
-                    img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                if(extract_img_en):
+                    if(str(push_num) == '爆'):
+                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                    elif(re.match(r'X.*', str(push_num)) is not None):
+                        pass
+                    elif(int(push_num) > thresh_push):
+                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
 
                 if(is_debug):
                     print(f"============================")
@@ -279,10 +287,13 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
                     articles_dic_arr.append({"title":title, "link":link_url, "push_num":push_num, "date":date, "author":author, "date_reform":date_reform, "content_info":content_info})
                     folder_name = ProcessTitleWriteOutFile(title, date_reform, author, push_num, out_dir, content_info)
 
-                    if(push_num == '爆'):
-                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
-                    elif(int(push_num) > thresh_push):
-                        img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                    if(extract_img_en):
+                        if(str(push_num) == '爆'):
+                            img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
+                        elif(re.match(r'X.*', str(push_num)) is not None):
+                            pass
+                        elif(int(push_num) > thresh_push):
+                            img_url_list = ProcessImg(content_info, out_img_folder+'/'+folder_name)
 
                 if(is_debug):
                     print(f"============================")
@@ -309,7 +320,7 @@ def GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, articles_dic_arr
 
     return (link_url, earlest_time, date_reform_prev)
 
-def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder):
+def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en):
     articles_dic_arr = []
     count_once = 0
     earlest_time = 99999999
@@ -317,7 +328,7 @@ def GetAllThePages(start_time, end_time, keyword, url, month_dic, is_debug, out_
 
     while(True):
         this_loop_article = []
-        (url, earlest_time, date_reform_prev) = GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder)
+        (url, earlest_time, date_reform_prev) = GetThePageAndUpdateURL(date_reform_prev, earlest_time, url, this_loop_article, start_time, end_time, month_dic, keyword, is_debug, out_dir, case_sensitive, thresh_occur, thresh_push, out_img_folder, extract_img_en)
         if(is_debug):
             print(f'earlest_time of this link_url page= {earlest_time}')
         for each_article in this_loop_article:

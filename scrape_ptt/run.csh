@@ -17,4 +17,5 @@ endif
 ./scrape_ptt.py -et 20180510 -out $out_dir -isd 0 -url https://www.ptt.cc/bbs/nba/index.html -key lwei781_msdie911545
 
 # auto-extract image in beauty. For example
-./scrape_ptt.py -et 20180805 -out ./beauty_20180806_20180805 -url https://www.ptt.cc/bbs/Beauty/index.html -isd 1 -thnum_push 49 -out_img_folder img_folder > debug.log
+./scrape_ptt.py -et 20180807 -out ./beauty_20180808_20180807 -url https://www.ptt.cc/bbs/Beauty/index.html -isd 1 -thnum_push 49 -out_img_folder img_folder -extract_img_en 1 > debug.log
+
